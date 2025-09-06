@@ -1,53 +1,205 @@
-# Netlify Developer Portfolio Starter (auto-annotated)
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uznomer Clicker</title>
+<style>
+body {
+    margin:0;
+    font-family:Arial, sans-serif;
+    background: linear-gradient(135deg, #000000, #1a1a1a, #3d2b1f);
+    color:#ffd700;
+    text-align:center;
+    height:100vh;
+    overflow:hidden;
+}
+#score { font-size:28px; margin-top:40px; margin-bottom:20px; }
+.click-circle {
+    width:180px; height:180px; margin:20px auto; border-radius:50%;
+    background:#2c2c2c; display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:bold; color:#ffd700; cursor:pointer;
+    transition: transform 0.2s;
+}
+.click-circle:active { transform: scale(0.9); }
 
-![Developer Portfolio](https://assets.stackbit.com/docs/personal-nextjs-starter-thumb.png)
+#limitBarContainer { width:80%; height:25px; background:#444; margin:20px auto; border-radius:12px; overflow:hidden; }
+#limitBar { height:100%; width:100%; display:flex; align-items:center; justify-content:center; font-weight:bold; }
 
-This is a full-fledged portfolio website built with Next.js, Tailwind CSS, [visual editor](https://docs.netlify.com/visual-editor/overview/) and the [Git Content Source](https://docs.netlify.com/create/content-sources/git/).
+.panels { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; width:80%; margin:30px auto; }
+.panel-btn, .promokod-btn {
+    padding:15px; background:#2c2c2c; border:none; border-radius:10px;
+    font-size:18px; font-weight:bold; color:#ffd700; cursor:pointer;
+    transition: transform 0.3s, background 0.3s;
+}
+.panel-btn:hover, .promokod-btn:hover { transform:scale(1.05); background:#3d3d3d; }
+.promokod-btn { width:80%; margin:20px auto; padding:20px; font-size:20px; border-radius:12px; }
 
-The codebase showcases **how to apply annotations at scale**, meaning: how to make much of your components [highlightable in the visual editor](https://docs.netlify.com/visual-editor/visual-editing/inline-editor/) through data attributes without manually adding code throughout the codebase.
+.fullscreen-panel {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.95); display:none; flex-direction:column;
+    align-items:center; justify-content:center; animation: fadeIn 0.5s ease forwards;
+    z-index:100; color:#ffd700; padding:20px; overflow-y:auto;
+}
+.fullscreen-panel.active { display:flex; }
+.back-btn {
+    position:absolute; top:15px; left:15px; padding:10px 15px;
+    background:#2c2c2c; border:none; border-radius:8px; color:#ffd700;
+    font-weight:bold; cursor:pointer;
+}
+.plusOne {
+    position:absolute; font-size:24px; color:yellow; font-weight:bold;
+    animation: rise 1s forwards; pointer-events:none;
+}
+@keyframes rise {0% {opacity:1; transform:translateY(0);}100% {opacity:0; transform:translateY(-50px);}}
+@keyframes fadeIn {from {opacity:0; transform:scale(0.8);} to {opacity:1; transform:scale(1);}}
+</style>
+</head>
+<body>
 
-**This is achieved by:**
+<div id="score">0</div>
+<div class="click-circle" id="clickCircle">Uznomer Clicker</div>
 
-1. Adding an annotation property to the content objects at they're loaded (see `src/utils/content.ts`)
-1. When rendering the page, each content sub-object is dynamically matched to the appropriate component. At this point, wrap each component with an annotation, based on the abovementioned content property. See `src/components/components-registry.tsx`.
+<div id="limitBarContainer">
+    <div id="limitBar">1000/2500</div>
+</div>
 
-**⚡ Demo:** [auto-annotated-portfolio.netlify.app](https://auto-annotated-portfolio.netlify.app)
+<div class="panels">
+    <button class="panel-btn" onclick="openPanel('xizmatlar')">Xizmatlar</button>
+    <button class="panel-btn" onclick="openPanel('sotuv')">Sotuv</button>
+</div>
+<div>
+    <button class="promokod-btn" onclick="openPanel('promokod')">Promokod</button>
+</div>
 
-## Deploying to Netlify
+<!-- Xizmatlar paneli -->
+<div class="fullscreen-panel" id="xizmatlar">
+    <button class="back-btn" onclick="closePanel('xizmatlar')">⬅ Orqaga</button>
+    <h2>Xizmatlar</h2>
+    <p>2x 30s (150 Click)</p>
+    <button onclick="buyDoubleClick()">Sotib olish</button>
+    <p id="doubleAlert"></p>
+    <button onclick="increaseLimitFunc()">Limitni oshirish</button>
+</div>
 
-If you click "Deploy to Netlify" button, it will create a new repo for you that looks exactly like this one, and sets that repo up immediately for deployment on Netlify.
+<!-- Sotuv paneli -->
+<div class="fullscreen-panel" id="sotuv">
+    <button class="back-btn" onclick="closePanel('sotuv')">⬅ Orqaga</button>
+    <h2>Sotuv</h2>
+    <p>1 clicker = 0.01 $</p>
+    <input type="number" id="clickerInput" placeholder="Clickers soni">
+    <button onclick="calculateDollar()">Hisoblash</button>
+    <p id="dollarValue">Sizning dollar qiymatingiz: 0 $</p>
+    <button onclick="sellClickers()">Sotish</button>
+    <p id="sellAlert"></p>
+</div>
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/netlify-templates/auto-annotated-portfolio)
+<!-- Promokod paneli -->
+<div class="fullscreen-panel" id="promokod">
+    <button class="back-btn" onclick="closePanel('promokod')">⬅ Orqaga</button>
+    <h2>Promokod</h2>
+    <input type="text" id="promoInput" placeholder="Promokod kiriting">
+    <button onclick="applyPromo()">Qo'llash</button>
+    <p id="promoAlert"></p>
+</div>
 
-## Getting Started
+<script>
+// Click va limit
+let clicks = localStorage.getItem('clicks') ? parseInt(localStorage.getItem('clicks')) : 0;
+let currentLimit = localStorage.getItem('currentLimit') ? parseInt(localStorage.getItem('currentLimit')) : 1000;
+let maxLimit = 2500;
+let increaseCost = 150;
 
-The typical development process is to begin by working locally. Clone this repository, then run `npm install` in its root directory.
+const scoreDiv=document.getElementById('score');
+const clickCircle=document.getElementById('clickCircle');
+const limitBar=document.getElementById('limitBar');
 
-Run the Next.js development server:
+scoreDiv.textContent=clicks;
+updateLimitBar();
 
-```txt
-cd auto-annotated-portfolio
-npm run dev
-```
+clickCircle.addEventListener('click',(e)=>{
+    if(currentLimit>0){
+        clicks++;
+        currentLimit--;
+        scoreDiv.textContent=clicks;
+        updateLimitBar();
+        localStorage.setItem('clicks', clicks);
+        localStorage.setItem('currentLimit', currentLimit);
+        showPlusOne(e);
+    } else { alert('Limit tugadi!'); }
+});
 
-Install the [Netlify visual editor CLI](https://www.npmjs.com/package/@stackbit/cli). Then open a new terminal window in the same project directory and run the Netlify visual editor dev server:
+function showPlusOne(event){
+    const plus=document.createElement('div');
+    plus.classList.add('plusOne');
+    plus.innerText='+1';
+    const x = event.clientX + (Math.random()*20-10);
+    const y = event.clientY + (Math.random()*20-10);
+    plus.style.left = x+'px';
+    plus.style.top = y+'px';
+    document.body.appendChild(plus);
+    setTimeout(()=> plus.remove(),1000);
+}
 
-```txt
-npm install -g @stackbit/cli
-stackbit dev
-```
+// Limit barni yangilash (o'zgartirilgan)
+function updateLimitBar(){
+    let percent = Math.min((currentLimit/maxLimit)*100, 100);
+    limitBar.style.width = percent + '%';
 
-This outputs your own Netlify visual editor URL. Open this, register or sign in, and you will be directed to Netlify's visual editor for your new project.
+    // Rangni limitga qarab o'zgartirish
+    let red = Math.floor(255 * (1 - currentLimit / maxLimit));
+    let green = Math.floor(255 * (currentLimit / maxLimit));
+    limitBar.style.background = `rgb(${red},${green},0)`;
 
-![Next.js Dev + Netlify visual editor dev](https://assets.stackbit.com/docs/next-dev-stackbit-dev.png)
+    // Matnni o'rtada saqlash
+    limitBar.textContent = `${currentLimit}/${maxLimit}`;
+    limitBar.style.display = 'flex';
+    limitBar.style.alignItems = 'center';
+    limitBar.style.justifyContent = 'center';
+}
 
-## Next Steps
+// Limit asta-sekin tiklanadi
+setInterval(()=>{
+    if(currentLimit<maxLimit){
+        currentLimit++;
+        updateLimitBar();
+        localStorage.setItem('currentLimit', currentLimit);
+    }
+},1000);
 
-Here are a few suggestions on what to do next if you're new to Netlify Visual Editor:
+// Xizmatlar
+function buyDoubleClick(){ alert('2x aktiv 30s davomida!'); }
+function increaseLimitFunc(){
+    if(clicks>=increaseCost){
+        clicks-=increaseCost;
+        currentLimit+=1000;
+        maxLimit+=1000;
+        increaseCost+=100;
+        scoreDiv.textContent=clicks;
+        updateLimitBar();
+        localStorage.setItem('clicks', clicks);
+        localStorage.setItem('currentLimit', currentLimit);
+    } else { alert('Click yetarli emas!'); }
+}
 
-- Learn [how Netlify Visual Editor works](https://docs.netlify.com/visual-editor/overview/)
-- Check [Netlify visual editor reference documentation](https://visual-editor-reference.netlify.com/)
+// Sotuv
+function calculateDollar(){
+    const input = document.getElementById('clickerInput').value;
+    document.getElementById('dollarValue').innerText = `Sizning dollar qiymatingiz: ${(input*0.01).toFixed(2)} $`;
+}
+function sellClickers(){ alert('Sotish imkoniyati hozir yo‘q'); }
 
-## Support
+// Promokod
+function applyPromo(){
+    const promo=document.getElementById('promoInput').value.trim();
+    const promoAlert=document.getElementById('promoAlert');
+    if(promo===''){ promoAlert.innerText='Iltimos promokod kiriting'; return; }
+    promoAlert.innerText='Promokod ishlatildi!';
+}
 
-If you get stuck along the way, get help in our [support forums](https://answers.netlify.com/).
+// Panel funktsiyalar
+function openPanel(id){ document.getElementById(id).classList.add('active'); }
+function closePanel(id){ document.getElementById(id).classList.remove('active'); }
+</script>
+</body>
+</html>
